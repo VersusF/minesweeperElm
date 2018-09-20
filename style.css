@@ -1,0 +1,19 @@
+div.wrapperDiv{
+    width: 100%;
+    height: 100%;
+    margin: auto;
+}
+
+.myTable {
+    border-collapse: collapse;
+    margin: auto;
+}
+table.myTable tr td {
+    border: 1px solid black;
+}
+table.myTable td {
+    padding: 5px;
+    width: 20px;
+    height: 20px;
+    text-align: center;
+}
