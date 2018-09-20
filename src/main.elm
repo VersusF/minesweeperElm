@@ -2,24 +2,27 @@ module Main exposing (Model, Msg, update, view, subscriptions, init)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Debug
+import Random
 import Browser
 
 
 main =
-    Browser.element
-      { init = init
-      , view = view
-      , update = update
-      , subscriptions = subscriptions
-    }
+  Browser.element
+    { init = init
+    , view = view
+    , update = update
+    , subscriptions = subscriptions
+  }
 
 -- MODEL
 
 type alias Model =
-    { table : List (List Cell)
-    , rowNumber : Int
-    , columnNumber : Int
-    }
+  { table : List (List Cell)
+  , rowNumber : Int
+  , columnNumber : Int
+  , mineNumber : Int
+  }
 
 type alias Cell =
   { status : Status
@@ -29,6 +32,7 @@ type alias Cell =
 type Status
   = Number Int
   | Mine
+  | Empty
 
 type Visualization
   = Hidden
@@ -36,8 +40,9 @@ type Visualization
   | Flagged
 
 type Msg
-    = ShowMine Int Int
-    | Initialize
+  = ShowMine Int Int
+  | Initialize
+  | PopolateTable (List (Int, Int))
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -49,13 +54,20 @@ update msg model =
     Initialize ->
       (model, Cmd.none)
 
+    PopolateTable list ->
+      let
+        _ = Debug.log "Lista di punti" (List.sort list)
+      in
+        (model, Cmd.none)
+
 
 view : Model -> Html Msg
 view model =
   div []
     [ ul []
-      [ li [] [text ("row Number: " ++ (String.fromInt model.rowNumber))]
-      , li [] [text ("column Number: " ++ (String.fromInt model.columnNumber))]
+      [ li [] [text ("Row number: " ++ (String.fromInt model.rowNumber))]
+      , li [] [text ("Column number: " ++ (String.fromInt model.columnNumber))]
+      , li [] [text ("Mines number: " ++ (String.fromInt model.mineNumber))]
       ]
     , showTable model
     ]
@@ -63,24 +75,32 @@ view model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.none
+  Sub.none
 
 
 init : () -> (Model, Cmd Msg)
 init _ = 
-    ( initializeModel 10 10
-    , Cmd.none
+  let
+    model = initializeModel 10 10 20
+  in
+    ( model
+    , Random.generate PopolateTable (minesLocation model)
     )
 
 -- MY FUNCTIONS
 
-initializeModel : Int -> Int -> Model
-initializeModel nRows nColumn =
+minesLocation : Model -> Random.Generator (List (Int, Int))
+minesLocation model =
+-- TODO prendi i numeri dal model
   let
-    table = List.repeat nRows (List.repeat nColumn (Cell Mine Hidden))
-    -- TODO inizializzala
+    rowMax = model.rowNumber - 1
+    colMax = model.columnNumber - 1
   in
-    Model table nRows nColumn
+    Random.list model.mineNumber (Random.pair (Random.int 0 rowMax) (Random.int 0 colMax))
+
+initializeModel : Int -> Int -> Int -> Model
+initializeModel nRows nColumn nMines =
+  Model [] nRows nColumn nMines
 
 showTable : Model -> Html Msg
 showTable model =
@@ -95,20 +115,23 @@ showCell cell =
   td []
     [ 
       case cell.visalization of
-          Hidden ->
-            text ""              
-      
-          Flagged ->
-            text "F"
+        Hidden ->
+          text ""              
+    
+        Flagged ->
+          text "F"
 
-          Shown ->
-            case cell.status of
-              Number 0 ->
-                text ""
+        Shown ->
+          case cell.status of
+            Number 0 ->
+              text ""
 
-              Number n ->
-                text (String.fromInt n)
-                  
-              Mine ->
-                text "M" 
+            Number n ->
+              text (String.fromInt n)
+                
+            Mine ->
+              text "M" 
+
+            Empty ->
+              text ""
     ]
