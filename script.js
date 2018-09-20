@@ -4376,7 +4376,7 @@ var author$project$Main$PopolateTable = function (a) {
 	return {$: 'PopolateTable', a: a};
 };
 var author$project$Main$Model = F4(
-	function (table, rowNumber, mineNumber, columnNumber) {
+	function (table, rowNumber, columnNumber, mineNumber) {
 		return {columnNumber: columnNumber, mineNumber: mineNumber, rowNumber: rowNumber, table: table};
 	});
 var elm$core$Basics$EQ = {$: 'EQ'};
@@ -5096,11 +5096,51 @@ var elm$core$Platform$Sub$none = elm$core$Platform$Sub$batch(_List_Nil);
 var author$project$Main$subscriptions = function (model) {
 	return elm$core$Platform$Sub$none;
 };
+var author$project$Main$Cell = F2(
+	function (status, visalization) {
+		return {status: status, visalization: visalization};
+	});
+var author$project$Main$Empty = {$: 'Empty'};
+var author$project$Main$Hidden = {$: 'Hidden'};
+var author$project$Main$addMine = F2(
+	function (_n0, table) {
+		var x = _n0.a;
+		var y = _n0.b;
+		return table;
+	});
+var elm$core$List$repeatHelp = F3(
+	function (result, n, value) {
+		repeatHelp:
+		while (true) {
+			if (n <= 0) {
+				return result;
+			} else {
+				var $temp$result = A2(elm$core$List$cons, value, result),
+					$temp$n = n - 1,
+					$temp$value = value;
+				result = $temp$result;
+				n = $temp$n;
+				value = $temp$value;
+				continue repeatHelp;
+			}
+		}
+	});
+var elm$core$List$repeat = F2(
+	function (n, value) {
+		return A3(elm$core$List$repeatHelp, _List_Nil, n, value);
+	});
+var author$project$Main$createTableWithMines = F3(
+	function (nRow, nCol, mines) {
+		var emptyTable = A2(
+			elm$core$List$repeat,
+			nRow,
+			A2(
+				elm$core$List$repeat,
+				nCol,
+				A2(author$project$Main$Cell, author$project$Main$Empty, author$project$Main$Hidden)));
+		return A3(elm$core$List$foldl, author$project$Main$addMine, emptyTable, mines);
+	});
 var elm$core$Debug$log = _Debug_log;
-var elm$core$List$sortBy = _List_sortBy;
-var elm$core$List$sort = function (xs) {
-	return A2(elm$core$List$sortBy, elm$core$Basics$identity, xs);
-};
 var elm$core$Platform$Cmd$batch = _Platform_batch;
 var elm$core$Platform$Cmd$none = elm$core$Platform$Cmd$batch(_List_Nil);
 var author$project$Main$update = F2(
@@ -5114,11 +5154,13 @@ var author$project$Main$update = F2(
 				return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
 			default:
 				var list = msg.a;
-				var _n1 = A2(
-					elm$core$Debug$log,
-					'Lista di punti',
-					elm$core$List$sort(list));
-				return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
+				var table = A3(author$project$Main$createTableWithMines, model.rowNumber, model.rowNumber, list);
+				var _n1 = A2(elm$core$Debug$log, 'Lista', list);
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{table: table}),
+					elm$core$Platform$Cmd$none);
 		}
 	});
 var elm$json$Json$Decode$map = _Json_map1;

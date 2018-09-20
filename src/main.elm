@@ -48,7 +48,7 @@ type Msg
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
-    ShowMine i j->
+    ShowMine i j ->
       (model, Cmd.none)
 
     Initialize ->
@@ -56,9 +56,10 @@ update msg model =
 
     PopolateTable list ->
       let
-        _ = Debug.log "Lista di punti" (List.sort list)
+        table = createTableWithMines model.rowNumber model.rowNumber list
+        _ = Debug.log "Lista" list
       in
-        (model, Cmd.none)
+        ({model | table = table}, Cmd.none)
 
 
 view : Model -> Html Msg
@@ -88,6 +89,17 @@ init _ =
     )
 
 -- MY FUNCTIONS
+
+createTableWithMines : Int -> Int -> List (Int, Int) -> List (List Cell)
+createTableWithMines nRow nCol mines =
+  let
+    emptyTable = List.repeat nRow (List.repeat nCol (Cell Empty Hidden))
+  in
+    List.foldl addMine emptyTable mines
+
+addMine : (Int, Int) -> List (List Cell) -> List (List Cell)
+addMine (x, y) table =
+  table
 
 minesLocation : Model -> Random.Generator (List (Int, Int))
 minesLocation model =
