@@ -3,6 +3,7 @@ module Main exposing (Model, Msg, update, view, subscriptions, init)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Debug
+import Array exposing (Array)
 import Random
 import Browser
 
@@ -18,7 +19,7 @@ main =
 -- MODEL
 
 type alias Model =
-  { table : List (List Cell)
+  { table : Array (Array Cell)
   , rowNumber : Int
   , columnNumber : Int
   , mineNumber : Int
@@ -90,20 +91,48 @@ init _ =
 
 -- MY FUNCTIONS
 
-createTableWithMines : Int -> Int -> List (Int, Int) -> List (List Cell)
+createTableWithMines : Int -> Int -> List (Int, Int) -> Array (Array Cell)
 createTableWithMines nRow nCol mines =
   let
-    emptyTable = List.repeat nRow (List.repeat nCol (Cell Empty Hidden))
+    emptyTable = Array.repeat nRow (Array.repeat nCol (Cell Empty Hidden))
   in
     List.foldl addMine emptyTable mines
 
-addMine : (Int, Int) -> List (List Cell) -> List (List Cell)
+addMine : (Int, Int) -> Array (Array Cell) -> Array (Array Cell)
 addMine (x, y) table =
-  table
+  let
+    rowMaybe = Array.get x table
+  in
+    case rowMaybe of
+      Just row ->
+        let
+          cellMaybe = Array.get y row
+        in
+          case cellMaybe of
+            Just cell ->
+              case cell.status of
+                Empty ->
+                  let
+                    -- TODO they should be hidden
+                    newRow = Array.set y (Cell Mine Shown) row
+                  in
+                    Array.set x newRow table
+
+                Mine ->
+                  -- TODO prossima mina
+                  table
+
+                _ ->
+                  table
+            
+            Nothing ->
+              table
+  
+      Nothing ->
+        table
 
 minesLocation : Model -> Random.Generator (List (Int, Int))
 minesLocation model =
--- TODO prendi i numeri dal model
   let
     rowMax = model.rowNumber - 1
     colMax = model.columnNumber - 1
@@ -112,15 +141,15 @@ minesLocation model =
 
 initializeModel : Int -> Int -> Int -> Model
 initializeModel nRows nColumn nMines =
-  Model [] nRows nColumn nMines
+  Model Array.empty nRows nColumn nMines
 
 showTable : Model -> Html Msg
 showTable model =
-  table [class "myTable"] (List.map showLine model.table)
+  table [class "myTable"] (List.map showLine (Array.toList model.table))
 
-showLine : List Cell -> Html Msg
+showLine : Array Cell -> Html Msg
 showLine list =
-  tr [] (List.map showCell list)
+  tr [] (List.map showCell (Array.toList list))
 
 showCell : Cell -> Html Msg
 showCell cell =
