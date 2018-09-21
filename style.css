@@ -12,8 +12,14 @@ table.myTable tr td {
     border: 1px solid black;
 }
 table.myTable td {
-    padding: 5px;
-    width: 20px;
-    height: 20px;
+    width: 40px;
+    height: 40px;
     text-align: center;
+    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    font-size: 15pt;
+    user-select: none;
+}
+
+td.number0cell {
+    background-color: #bebebe;
 }

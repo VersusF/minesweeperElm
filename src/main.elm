@@ -2,10 +2,12 @@ module Main exposing (Model, Msg, update, view, subscriptions, init)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 import Debug
 import Array exposing (Array)
 import Random
 import Browser
+import Json.Decode as Json
 
 
 main =
@@ -30,13 +32,13 @@ type alias Table = Array (Array Cell)
 
 type alias Cell =
   { status : Status
-  , visalization : Visualization
+  , visualization : Visualization
   }
 
 type PlayerStatus
   = Playing
   | Win
-  | Loose
+  | Lost
 
 type Status
   = Number Int
@@ -49,7 +51,8 @@ type Visualization
   | Flagged
 
 type Msg
-  = ShowMine Int Int
+  = ShowCell Int Int
+  | FlagCell Int Int
   | Initialize
   | PopolateTable (List (Int, Int))
 
@@ -57,8 +60,29 @@ type Msg
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
-    ShowMine i j ->
-      (model, Cmd.none)
+    ShowCell i j ->
+      let
+        newTable = showCell model.table i j
+      in
+        ( { model 
+            | table = newTable
+            , playerStatus = 
+              case getCell model.table i j of
+                Just cell -> 
+                  if isMine cell then 
+                    Lost 
+                  else if isTableComplete newTable then
+                    Win
+                  else
+                    Playing
+
+                Nothing -> Playing
+            }
+        , Cmd.none
+        )
+
+    FlagCell i j ->
+      ({model | table = flagCell model.table i j}, Cmd.none)
 
     Initialize ->
       (model, Cmd.none)
@@ -73,15 +97,12 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-  div []
-    [ ul []
-      [ li [] [text ("Row number: " ++ (String.fromInt model.rowNumber))]
-      , li [] [text ("Column number: " ++ (String.fromInt model.columnNumber))]
-      , li [] [text ("Mines number: " ++ (String.fromInt model.mineNumber))]
-      ]
-    , showTable model
-    ]
+  case model.playerStatus of
+    Playing -> viewPlayingBoard model
+        
+    Win -> viewWinningBoard
 
+    Lost -> viewLosingBoard
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
@@ -98,6 +119,100 @@ init _ =
     )
 
 -- MY FUNCTIONS
+
+isTableComplete : Table -> Bool
+isTableComplete table =
+  -- The table is complete if all numbers are shown
+  -- aka there are no hidden cell -> no hidden rows
+  0 == Array.length (Array.filter isRowHidden table)
+
+isRowHidden : Array Cell -> Bool
+isRowHidden row =
+  -- A row is hidden if there is at least one hidden cell
+  0 /= Array.length (Array.filter isCellHidden row)
+
+isCellHidden : Cell -> Bool
+isCellHidden cell =
+  -- A cell is hidden only if it's a hidden number
+  case cell.status of
+    Number _ -> cell.visualization == Hidden
+    _ -> False
+
+getCell : Table -> Int -> Int -> Maybe Cell
+getCell table i j =
+  case Array.get i table of
+    Just row ->
+      Array.get j row
+    
+    Nothing ->
+      Nothing
+
+
+viewPlayingBoard : Model -> Html Msg
+viewPlayingBoard model =
+  div []
+    [ ul []
+      [ li [] [text ("Row number: " ++ (String.fromInt model.rowNumber))]
+      , li [] [text ("Column number: " ++ (String.fromInt model.columnNumber))]
+      , li [] [text ("Mines number: " ++ (String.fromInt model.mineNumber))]
+      ]
+    , vieTable model
+    ]
+
+viewWinningBoard : Html Msg
+viewWinningBoard =
+  div []
+    [h1 [class "title"] [text "Congratulations! You win!"]]
+
+viewLosingBoard : Html Msg
+viewLosingBoard =
+  div []
+    [h1 [class "title"] [text "Game Over"]]
+
+
+flagCell : Table -> Int -> Int -> Table
+flagCell table i j =
+  case Array.get i table of
+    Just row ->
+      case Array.get j row of
+        Just cell ->
+          let
+            newRow = Array.set j {cell | visualization = Flagged} row
+          in
+            Array.set i newRow table
+          
+        Nothing ->
+          table
+
+    Nothing ->
+      table
+
+showCell : Table -> Int -> Int -> Table
+showCell table i j =
+  case Array.get i table of
+    Just row ->
+      case Array.get j row of
+        Just cell ->
+          let
+            newRow = Array.set j {cell | visualization = Shown} row
+            newTable = Array.set i newRow table
+          in
+            case cell.status of
+              Number 0 ->
+                showNearCells newTable i j
+          
+              _ -> 
+                newTable
+          
+        Nothing ->
+          table
+
+    Nothing ->
+      table
+
+showNearCells : Table -> Int -> Int -> Table
+showNearCells table i j =
+  table
 
 createTableWithNumbers : Table -> Table
 createTableWithNumbers table =
@@ -132,8 +247,8 @@ getNearCells table i j =
 
 
 isMine : Cell -> Bool
-isMine cella =
-  case cella.status of
+isMine cell =
+  case cell.status of
       Mine -> True
       _ -> False          
 
@@ -153,7 +268,6 @@ addMine (i, j) table =
           case cell.status of
             Empty ->
               let
-                -- TODO they should be hidden
                 newRow = Array.set j (Cell Mine Hidden) row
               in
                 Array.set i newRow table
@@ -193,36 +307,54 @@ initializeModel : Int -> Int -> Int -> Model
 initializeModel nRows nColumn nMines =
   Model Array.empty nRows nColumn nMines Playing
 
-showTable : Model -> Html Msg
-showTable model =
-  table [class "myTable"] (List.map showLine (Array.toList model.table))
+vieTable : Model -> Html Msg
+vieTable model =
+  table [class "myTable"] (List.indexedMap viewRow (Array.toList model.table))
 
-showLine : Array Cell -> Html Msg
-showLine list =
-  tr [] (List.map showCell (Array.toList list))
+viewRow : Int -> Array Cell -> Html Msg
+viewRow i list =
+  tr [] (List.indexedMap (viewCell i) (Array.toList list))
 
-showCell : Cell -> Html Msg
-showCell cell =
-  td []
-    [ 
-      case cell.visalization of
-        Hidden ->
-          text ""              
-    
-        Flagged ->
-          text "F"
+viewCell : Int -> Int -> Cell -> Html Msg
+viewCell i j cell =
+  case cell.visualization of
+    Hidden ->
+      td 
+        [ class "hiddenCell"
+        , onRightClick (FlagCell i j)
+        , onClick (ShowCell i j)
+        ]
+        [text ""]     
 
-        Shown ->
-          case cell.status of
-            Number 0 ->
-              text ""
+    Flagged ->
+      td
+        [ class "flaggedCell"
+        , onClick (ShowCell i j)
+        ]
+        [text "F"]
+      
 
-            Number n ->
-              text (String.fromInt n)
-                
-            Mine ->
-              text "M" 
+    Shown ->
+      case cell.status of
+        Number 0 ->
+          td [class "number0cell"] [text ""]
 
-            Empty ->
-              text ""
-    ]
+        Number n ->
+          td [class "numberCell"] [text (String.fromInt n)]
+            
+        Mine ->
+          td [class "mineCell"] [text "M"] 
+
+        Empty ->
+          td [] []
+
+
+onRightClick message =
+  custom
+    "contextmenu"
+    ( Json.succeed 
+      { message = message
+      , preventDefault = True
+      , stopPropagation = True
+      }
+    )
