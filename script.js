@@ -5103,7 +5103,6 @@ var author$project$Main$Cell = F2(
 var author$project$Main$Empty = {$: 'Empty'};
 var author$project$Main$Hidden = {$: 'Hidden'};
 var author$project$Main$Mine = {$: 'Mine'};
-var author$project$Main$Shown = {$: 'Shown'};
 var elm$core$Array$bitMask = 4294967295 >>> (32 - elm$core$Array$shiftStep);
 var elm$core$Elm$JsArray$unsafeGet = _JsArray_unsafeGet;
 var elm$core$Array$getHelp = F3(
@@ -5144,6 +5143,10 @@ var elm$core$Array$get = F2(
 			A2(elm$core$Elm$JsArray$unsafeGet, elm$core$Array$bitMask & index, tail)) : elm$core$Maybe$Just(
 			A3(elm$core$Array$getHelp, startShift, index, tree)));
 	});
+var elm$core$Array$length = function (_n0) {
+	var len = _n0.a;
+	return len;
+};
 var elm$core$Elm$JsArray$unsafeSet = _JsArray_unsafeSet;
 var elm$core$Array$setHelp = F4(
 	function (shift, index, value, tree) {
@@ -5187,35 +5190,59 @@ var elm$core$Array$set = F3(
 			A4(elm$core$Array$setHelp, startShift, index, value, tree),
 			tail));
 	});
+var elm$core$Basics$modBy = _Basics_modBy;
 var author$project$Main$addMine = F2(
 	function (_n0, table) {
-		var x = _n0.a;
-		var y = _n0.b;
-		var rowMaybe = A2(elm$core$Array$get, x, table);
-		if (rowMaybe.$ === 'Just') {
-			var row = rowMaybe.a;
-			var cellMaybe = A2(elm$core$Array$get, y, row);
-			if (cellMaybe.$ === 'Just') {
-				var cell = cellMaybe.a;
-				var _n3 = cell.status;
-				switch (_n3.$) {
-					case 'Empty':
-						var newRow = A3(
-							elm$core$Array$set,
-							y,
-							A2(author$project$Main$Cell, author$project$Main$Mine, author$project$Main$Shown),
-							row);
-						return A3(elm$core$Array$set, x, newRow, table);
-					case 'Mine':
-						return table;
-					default:
-						return table;
+		addMine:
+		while (true) {
+			var i = _n0.a;
+			var j = _n0.b;
+			var _n1 = A2(elm$core$Array$get, i, table);
+			if (_n1.$ === 'Just') {
+				var row = _n1.a;
+				var _n2 = A2(elm$core$Array$get, j, row);
+				if (_n2.$ === 'Just') {
+					var cell = _n2.a;
+					var _n3 = cell.status;
+					switch (_n3.$) {
+						case 'Empty':
+							var newRow = A3(
+								elm$core$Array$set,
+								j,
+								A2(author$project$Main$Cell, author$project$Main$Mine, author$project$Main$Hidden),
+								row);
+							return A3(elm$core$Array$set, i, newRow, table);
+						case 'Mine':
+							var newJ = A2(
+								elm$core$Basics$modBy,
+								elm$core$Array$length(row),
+								j + 1);
+							if (!newJ) {
+								var newI = A2(
+									elm$core$Basics$modBy,
+									elm$core$Array$length(table),
+									i + 1);
+								var $temp$_n0 = _Utils_Tuple2(newI, newJ),
+									$temp$table = table;
+								_n0 = $temp$_n0;
+								table = $temp$table;
+								continue addMine;
+							} else {
+								var $temp$_n0 = _Utils_Tuple2(i, newJ),
+									$temp$table = table;
+								_n0 = $temp$_n0;
+								table = $temp$table;
+								continue addMine;
+							}
+						default:
+							return table;
+					}
+				} else {
+					return table;
 				}
 			} else {
 				return table;
 			}
-		} else {
-			return table;
 		}
 	});
 var elm$core$Array$repeat = F2(
@@ -5238,80 +5265,278 @@ var author$project$Main$createTableWithMines = F3(
 				A2(author$project$Main$Cell, author$project$Main$Empty, author$project$Main$Hidden)));
 		return A3(elm$core$List$foldl, author$project$Main$addMine, emptyTable, mines);
 	});
-var elm$core$Debug$log = _Debug_log;
-var elm$core$Platform$Cmd$batch = _Platform_batch;
-var elm$core$Platform$Cmd$none = elm$core$Platform$Cmd$batch(_List_Nil);
-var author$project$Main$update = F2(
-	function (msg, model) {
-		switch (msg.$) {
-			case 'ShowMine':
-				var i = msg.a;
-				var j = msg.b;
-				return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
-			case 'Initialize':
-				return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
-			default:
-				var list = msg.a;
-				var table = A3(author$project$Main$createTableWithMines, model.rowNumber, model.rowNumber, list);
-				var _n1 = A2(elm$core$Debug$log, 'Lista', list);
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{table: table}),
-					elm$core$Platform$Cmd$none);
+var author$project$Main$Number = function (a) {
+	return {$: 'Number', a: a};
+};
+var elm$core$Elm$JsArray$foldl = _JsArray_foldl;
+var elm$core$Array$foldl = F3(
+	function (func, baseCase, _n0) {
+		var tree = _n0.c;
+		var tail = _n0.d;
+		var helper = F2(
+			function (node, acc) {
+				if (node.$ === 'SubTree') {
+					var subTree = node.a;
+					return A3(elm$core$Elm$JsArray$foldl, helper, acc, subTree);
+				} else {
+					var values = node.a;
+					return A3(elm$core$Elm$JsArray$foldl, func, acc, values);
+				}
+			});
+		return A3(
+			elm$core$Elm$JsArray$foldl,
+			func,
+			A3(elm$core$Elm$JsArray$foldl, helper, baseCase, tree),
+			tail);
+	});
+var elm$core$Elm$JsArray$map = _JsArray_map;
+var elm$core$Array$map = F2(
+	function (func, _n0) {
+		var len = _n0.a;
+		var startShift = _n0.b;
+		var tree = _n0.c;
+		var tail = _n0.d;
+		var helper = function (node) {
+			if (node.$ === 'SubTree') {
+				var subTree = node.a;
+				return elm$core$Array$SubTree(
+					A2(elm$core$Elm$JsArray$map, helper, subTree));
+			} else {
+				var values = node.a;
+				return elm$core$Array$Leaf(
+					A2(elm$core$Elm$JsArray$map, func, values));
+			}
+		};
+		return A4(
+			elm$core$Array$Array_elm_builtin,
+			len,
+			startShift,
+			A2(elm$core$Elm$JsArray$map, helper, tree),
+			A2(elm$core$Elm$JsArray$map, func, tail));
+	});
+var elm$core$Elm$JsArray$appendN = _JsArray_appendN;
+var elm$core$Elm$JsArray$slice = _JsArray_slice;
+var elm$core$Array$appendHelpBuilder = F2(
+	function (tail, builder) {
+		var tailLen = elm$core$Elm$JsArray$length(tail);
+		var notAppended = (elm$core$Array$branchFactor - elm$core$Elm$JsArray$length(builder.tail)) - tailLen;
+		var appended = A3(elm$core$Elm$JsArray$appendN, elm$core$Array$branchFactor, builder.tail, tail);
+		return (notAppended < 0) ? {
+			nodeList: A2(
+				elm$core$List$cons,
+				elm$core$Array$Leaf(appended),
+				builder.nodeList),
+			nodeListSize: builder.nodeListSize + 1,
+			tail: A3(elm$core$Elm$JsArray$slice, notAppended, tailLen, tail)
+		} : ((!notAppended) ? {
+			nodeList: A2(
+				elm$core$List$cons,
+				elm$core$Array$Leaf(appended),
+				builder.nodeList),
+			nodeListSize: builder.nodeListSize + 1,
+			tail: elm$core$Elm$JsArray$empty
+		} : {nodeList: builder.nodeList, nodeListSize: builder.nodeListSize, tail: appended});
+	});
+var elm$core$List$drop = F2(
+	function (n, list) {
+		drop:
+		while (true) {
+			if (n <= 0) {
+				return list;
+			} else {
+				if (!list.b) {
+					return list;
+				} else {
+					var x = list.a;
+					var xs = list.b;
+					var $temp$n = n - 1,
+						$temp$list = xs;
+					n = $temp$n;
+					list = $temp$list;
+					continue drop;
+				}
+			}
 		}
 	});
-var elm$json$Json$Decode$map = _Json_map1;
-var elm$json$Json$Decode$map2 = _Json_map2;
-var elm$json$Json$Decode$succeed = _Json_succeed;
-var elm$virtual_dom$VirtualDom$toHandlerInt = function (handler) {
-	switch (handler.$) {
-		case 'Normal':
-			return 0;
-		case 'MayStopPropagation':
-			return 1;
-		case 'MayPreventDefault':
-			return 2;
-		default:
-			return 3;
-	}
-};
-var elm$html$Html$td = _VirtualDom_node('td');
-var elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
-var elm$html$Html$text = elm$virtual_dom$VirtualDom$text;
-var author$project$Main$showCell = function (cell) {
-	return A2(
-		elm$html$Html$td,
-		_List_Nil,
-		_List_fromArray(
-			[
-				function () {
-				var _n0 = cell.visalization;
-				switch (_n0.$) {
-					case 'Hidden':
-						return elm$html$Html$text('');
-					case 'Flagged':
-						return elm$html$Html$text('F');
-					default:
-						var _n1 = cell.status;
-						switch (_n1.$) {
-							case 'Number':
-								if (!_n1.a) {
-									return elm$html$Html$text('');
-								} else {
-									var n = _n1.a;
-									return elm$html$Html$text(
-										elm$core$String$fromInt(n));
-								}
-							case 'Mine':
-								return elm$html$Html$text('M');
-							default:
-								return elm$html$Html$text('');
+var elm$core$Array$sliceLeft = F2(
+	function (from, array) {
+		var len = array.a;
+		var tree = array.c;
+		var tail = array.d;
+		if (!from) {
+			return array;
+		} else {
+			if (_Utils_cmp(
+				from,
+				elm$core$Array$tailIndex(len)) > -1) {
+				return A4(
+					elm$core$Array$Array_elm_builtin,
+					len - from,
+					elm$core$Array$shiftStep,
+					elm$core$Elm$JsArray$empty,
+					A3(
+						elm$core$Elm$JsArray$slice,
+						from - elm$core$Array$tailIndex(len),
+						elm$core$Elm$JsArray$length(tail),
+						tail));
+			} else {
+				var skipNodes = (from / elm$core$Array$branchFactor) | 0;
+				var helper = F2(
+					function (node, acc) {
+						if (node.$ === 'SubTree') {
+							var subTree = node.a;
+							return A3(elm$core$Elm$JsArray$foldr, helper, acc, subTree);
+						} else {
+							var leaf = node.a;
+							return A2(elm$core$List$cons, leaf, acc);
 						}
+					});
+				var leafNodes = A3(
+					elm$core$Elm$JsArray$foldr,
+					helper,
+					_List_fromArray(
+						[tail]),
+					tree);
+				var nodesToInsert = A2(elm$core$List$drop, skipNodes, leafNodes);
+				if (!nodesToInsert.b) {
+					return elm$core$Array$empty;
+				} else {
+					var head = nodesToInsert.a;
+					var rest = nodesToInsert.b;
+					var firstSlice = from - (skipNodes * elm$core$Array$branchFactor);
+					var initialBuilder = {
+						nodeList: _List_Nil,
+						nodeListSize: 0,
+						tail: A3(
+							elm$core$Elm$JsArray$slice,
+							firstSlice,
+							elm$core$Elm$JsArray$length(head),
+							head)
+					};
+					return A2(
+						elm$core$Array$builderToArray,
+						true,
+						A3(elm$core$List$foldl, elm$core$Array$appendHelpBuilder, initialBuilder, rest));
 				}
-			}()
-			]));
-};
+			}
+		}
+	});
+var elm$core$Array$fetchNewTail = F4(
+	function (shift, end, treeEnd, tree) {
+		fetchNewTail:
+		while (true) {
+			var pos = elm$core$Array$bitMask & (treeEnd >>> shift);
+			var _n0 = A2(elm$core$Elm$JsArray$unsafeGet, pos, tree);
+			if (_n0.$ === 'SubTree') {
+				var sub = _n0.a;
+				var $temp$shift = shift - elm$core$Array$shiftStep,
+					$temp$end = end,
+					$temp$treeEnd = treeEnd,
+					$temp$tree = sub;
+				shift = $temp$shift;
+				end = $temp$end;
+				treeEnd = $temp$treeEnd;
+				tree = $temp$tree;
+				continue fetchNewTail;
+			} else {
+				var values = _n0.a;
+				return A3(elm$core$Elm$JsArray$slice, 0, elm$core$Array$bitMask & end, values);
+			}
+		}
+	});
+var elm$core$Array$hoistTree = F3(
+	function (oldShift, newShift, tree) {
+		hoistTree:
+		while (true) {
+			if ((_Utils_cmp(oldShift, newShift) < 1) || (!elm$core$Elm$JsArray$length(tree))) {
+				return tree;
+			} else {
+				var _n0 = A2(elm$core$Elm$JsArray$unsafeGet, 0, tree);
+				if (_n0.$ === 'SubTree') {
+					var sub = _n0.a;
+					var $temp$oldShift = oldShift - elm$core$Array$shiftStep,
+						$temp$newShift = newShift,
+						$temp$tree = sub;
+					oldShift = $temp$oldShift;
+					newShift = $temp$newShift;
+					tree = $temp$tree;
+					continue hoistTree;
+				} else {
+					return tree;
+				}
+			}
+		}
+	});
+var elm$core$Array$sliceTree = F3(
+	function (shift, endIdx, tree) {
+		var lastPos = elm$core$Array$bitMask & (endIdx >>> shift);
+		var _n0 = A2(elm$core$Elm$JsArray$unsafeGet, lastPos, tree);
+		if (_n0.$ === 'SubTree') {
+			var sub = _n0.a;
+			var newSub = A3(elm$core$Array$sliceTree, shift - elm$core$Array$shiftStep, endIdx, sub);
+			return (!elm$core$Elm$JsArray$length(newSub)) ? A3(elm$core$Elm$JsArray$slice, 0, lastPos, tree) : A3(
+				elm$core$Elm$JsArray$unsafeSet,
+				lastPos,
+				elm$core$Array$SubTree(newSub),
+				A3(elm$core$Elm$JsArray$slice, 0, lastPos + 1, tree));
+		} else {
+			return A3(elm$core$Elm$JsArray$slice, 0, lastPos, tree);
+		}
+	});
+var elm$core$Array$sliceRight = F2(
+	function (end, array) {
+		var len = array.a;
+		var startShift = array.b;
+		var tree = array.c;
+		var tail = array.d;
+		if (_Utils_eq(end, len)) {
+			return array;
+		} else {
+			if (_Utils_cmp(
+				end,
+				elm$core$Array$tailIndex(len)) > -1) {
+				return A4(
+					elm$core$Array$Array_elm_builtin,
+					end,
+					startShift,
+					tree,
+					A3(elm$core$Elm$JsArray$slice, 0, elm$core$Array$bitMask & end, tail));
+			} else {
+				var endIdx = elm$core$Array$tailIndex(end);
+				var depth = elm$core$Basics$floor(
+					A2(
+						elm$core$Basics$logBase,
+						elm$core$Array$branchFactor,
+						A2(elm$core$Basics$max, 1, endIdx - 1)));
+				var newShift = A2(elm$core$Basics$max, 5, depth * elm$core$Array$shiftStep);
+				return A4(
+					elm$core$Array$Array_elm_builtin,
+					end,
+					newShift,
+					A3(
+						elm$core$Array$hoistTree,
+						startShift,
+						newShift,
+						A3(elm$core$Array$sliceTree, startShift, endIdx, tree)),
+					A4(elm$core$Array$fetchNewTail, startShift, end, endIdx, tree));
+			}
+		}
+	});
+var elm$core$Array$translateIndex = F2(
+	function (index, _n0) {
+		var len = _n0.a;
+		var posIndex = (index < 0) ? (len + index) : index;
+		return (posIndex < 0) ? 0 : ((_Utils_cmp(posIndex, len) > 0) ? len : posIndex);
+	});
+var elm$core$Array$slice = F3(
+	function (from, to, array) {
+		var correctTo = A2(elm$core$Array$translateIndex, to, array);
+		var correctFrom = A2(elm$core$Array$translateIndex, from, array);
+		return (_Utils_cmp(correctFrom, correctTo) > 0) ? elm$core$Array$empty : A2(
+			elm$core$Array$sliceLeft,
+			correctFrom,
+			A2(elm$core$Array$sliceRight, correctTo, array));
+	});
 var elm$core$List$foldrHelper = F4(
 	function (fn, acc, ctr, ls) {
 		if (!ls.b) {
@@ -5367,6 +5592,185 @@ var elm$core$List$foldr = F3(
 	function (fn, acc, ls) {
 		return A4(elm$core$List$foldrHelper, fn, acc, 0, ls);
 	});
+var elm$core$List$append = F2(
+	function (xs, ys) {
+		if (!ys.b) {
+			return xs;
+		} else {
+			return A3(elm$core$List$foldr, elm$core$List$cons, ys, xs);
+		}
+	});
+var author$project$Main$getNearCells = F3(
+	function (table, i, j) {
+		var jLower = (!j) ? 0 : (j - 1);
+		var iLower = (!i) ? 0 : (i - 1);
+		var rows = A3(elm$core$Array$slice, iLower, i + 2, table);
+		var smallTable = A2(
+			elm$core$Array$map,
+			A2(elm$core$Array$slice, jLower, j + 2),
+			rows);
+		var rowsList = A2(elm$core$Array$map, elm$core$Array$toList, smallTable);
+		return A3(elm$core$Array$foldl, elm$core$List$append, _List_Nil, rowsList);
+	});
+var author$project$Main$isMine = function (cella) {
+	var _n0 = cella.status;
+	if (_n0.$ === 'Mine') {
+		return true;
+	} else {
+		return false;
+	}
+};
+var elm$core$List$filter = F2(
+	function (isGood, list) {
+		return A3(
+			elm$core$List$foldr,
+			F2(
+				function (x, xs) {
+					return isGood(x) ? A2(elm$core$List$cons, x, xs) : xs;
+				}),
+			_List_Nil,
+			list);
+	});
+var author$project$Main$createCellWithNumber = F4(
+	function (table, i, j, cell) {
+		var _n0 = cell.status;
+		if (_n0.$ === 'Empty') {
+			var nearMines = elm$core$List$length(
+				A2(
+					elm$core$List$filter,
+					author$project$Main$isMine,
+					A3(author$project$Main$getNearCells, table, i, j)));
+			return A2(
+				author$project$Main$Cell,
+				author$project$Main$Number(nearMines),
+				author$project$Main$Hidden);
+		} else {
+			return cell;
+		}
+	});
+var elm$core$Elm$JsArray$indexedMap = _JsArray_indexedMap;
+var elm$core$Array$indexedMap = F2(
+	function (func, _n0) {
+		var len = _n0.a;
+		var tree = _n0.c;
+		var tail = _n0.d;
+		var initialBuilder = {
+			nodeList: _List_Nil,
+			nodeListSize: 0,
+			tail: A3(
+				elm$core$Elm$JsArray$indexedMap,
+				func,
+				elm$core$Array$tailIndex(len),
+				tail)
+		};
+		var helper = F2(
+			function (node, builder) {
+				if (node.$ === 'SubTree') {
+					var subTree = node.a;
+					return A3(elm$core$Elm$JsArray$foldl, helper, builder, subTree);
+				} else {
+					var leaf = node.a;
+					var offset = builder.nodeListSize * elm$core$Array$branchFactor;
+					var mappedLeaf = elm$core$Array$Leaf(
+						A3(elm$core$Elm$JsArray$indexedMap, func, offset, leaf));
+					return {
+						nodeList: A2(elm$core$List$cons, mappedLeaf, builder.nodeList),
+						nodeListSize: builder.nodeListSize + 1,
+						tail: builder.tail
+					};
+				}
+			});
+		return A2(
+			elm$core$Array$builderToArray,
+			true,
+			A3(elm$core$Elm$JsArray$foldl, helper, initialBuilder, tree));
+	});
+var author$project$Main$createRowWithNumbers = F3(
+	function (table, i, row) {
+		return A2(
+			elm$core$Array$indexedMap,
+			A2(author$project$Main$createCellWithNumber, table, i),
+			row);
+	});
+var author$project$Main$createTableWithNumbers = function (table) {
+	return A2(
+		elm$core$Array$indexedMap,
+		author$project$Main$createRowWithNumbers(table),
+		table);
+};
+var elm$core$Platform$Cmd$batch = _Platform_batch;
+var elm$core$Platform$Cmd$none = elm$core$Platform$Cmd$batch(_List_Nil);
+var author$project$Main$update = F2(
+	function (msg, model) {
+		switch (msg.$) {
+			case 'ShowMine':
+				var i = msg.a;
+				var j = msg.b;
+				return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
+			case 'Initialize':
+				return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
+			default:
+				var list = msg.a;
+				var tableMines = A3(author$project$Main$createTableWithMines, model.rowNumber, model.rowNumber, list);
+				var tableNumbers = author$project$Main$createTableWithNumbers(tableMines);
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{table: tableNumbers}),
+					elm$core$Platform$Cmd$none);
+		}
+	});
+var elm$json$Json$Decode$map = _Json_map1;
+var elm$json$Json$Decode$map2 = _Json_map2;
+var elm$json$Json$Decode$succeed = _Json_succeed;
+var elm$virtual_dom$VirtualDom$toHandlerInt = function (handler) {
+	switch (handler.$) {
+		case 'Normal':
+			return 0;
+		case 'MayStopPropagation':
+			return 1;
+		case 'MayPreventDefault':
+			return 2;
+		default:
+			return 3;
+	}
+};
+var elm$html$Html$td = _VirtualDom_node('td');
+var elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
+var elm$html$Html$text = elm$virtual_dom$VirtualDom$text;
+var author$project$Main$showCell = function (cell) {
+	return A2(
+		elm$html$Html$td,
+		_List_Nil,
+		_List_fromArray(
+			[
+				function () {
+				var _n0 = cell.visalization;
+				switch (_n0.$) {
+					case 'Hidden':
+						return elm$html$Html$text(' ');
+					case 'Flagged':
+						return elm$html$Html$text('F');
+					default:
+						var _n1 = cell.status;
+						switch (_n1.$) {
+							case 'Number':
+								if (!_n1.a) {
+									return elm$html$Html$text(' ');
+								} else {
+									var n = _n1.a;
+									return elm$html$Html$text(
+										elm$core$String$fromInt(n));
+								}
+							case 'Mine':
+								return elm$html$Html$text('M');
+							default:
+								return elm$html$Html$text(' ');
+						}
+				}
+			}()
+			]));
+};
 var elm$core$List$map = F2(
 	function (f, xs) {
 		return A3(

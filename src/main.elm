@@ -19,16 +19,24 @@ main =
 -- MODEL
 
 type alias Model =
-  { table : Array (Array Cell)
+  { table : Table
   , rowNumber : Int
   , columnNumber : Int
   , mineNumber : Int
+  , playerStatus : PlayerStatus
   }
+
+type alias Table = Array (Array Cell)
 
 type alias Cell =
   { status : Status
   , visalization : Visualization
   }
+
+type PlayerStatus
+  = Playing
+  | Win
+  | Loose
 
 type Status
   = Number Int
@@ -57,10 +65,10 @@ update msg model =
 
     PopolateTable list ->
       let
-        table = createTableWithMines model.rowNumber model.rowNumber list
-        _ = Debug.log "Lista" list
+        tableMines = createTableWithMines model.rowNumber model.rowNumber list
+        tableNumbers = createTableWithNumbers tableMines
       in
-        ({model | table = table}, Cmd.none)
+        ({model | table = tableNumbers}, Cmd.none)
 
 
 view : Model -> Html Msg
@@ -91,45 +99,87 @@ init _ =
 
 -- MY FUNCTIONS
 
-createTableWithMines : Int -> Int -> List (Int, Int) -> Array (Array Cell)
+createTableWithNumbers : Table -> Table
+createTableWithNumbers table =
+  Array.indexedMap (createRowWithNumbers table) table
+
+createRowWithNumbers : Table -> Int -> Array Cell -> Array Cell
+createRowWithNumbers table i row =
+  Array.indexedMap (createCellWithNumber table i) row
+
+createCellWithNumber : Table -> Int -> Int -> Cell -> Cell
+createCellWithNumber table i j cell =
+  case cell.status of
+    Empty ->
+      let
+        nearMines = List.length (List.filter isMine (getNearCells table i j))
+      in
+        Cell (Number nearMines) Hidden
+
+    _ ->
+      cell
+
+getNearCells : Table -> Int -> Int -> List Cell
+getNearCells table i j =
+  let
+    iLower = if i == 0 then 0 else i - 1
+    jLower = if j == 0 then 0 else j - 1
+    rows = Array.slice iLower (i+2) table
+    smallTable = Array.map (Array.slice jLower (j+2)) rows
+    rowsList = Array.map Array.toList smallTable
+  in
+    Array.foldl List.append [] rowsList
+
+
+isMine : Cell -> Bool
+isMine cella =
+  case cella.status of
+      Mine -> True
+      _ -> False          
+
+createTableWithMines : Int -> Int -> List (Int, Int) -> Table
 createTableWithMines nRow nCol mines =
   let
     emptyTable = Array.repeat nRow (Array.repeat nCol (Cell Empty Hidden))
   in
     List.foldl addMine emptyTable mines
 
-addMine : (Int, Int) -> Array (Array Cell) -> Array (Array Cell)
-addMine (x, y) table =
-  let
-    rowMaybe = Array.get x table
-  in
-    case rowMaybe of
-      Just row ->
-        let
-          cellMaybe = Array.get y row
-        in
-          case cellMaybe of
-            Just cell ->
-              case cell.status of
-                Empty ->
-                  let
-                    -- TODO they should be hidden
-                    newRow = Array.set y (Cell Mine Shown) row
-                  in
-                    Array.set x newRow table
+addMine : (Int, Int) -> Table -> Table
+addMine (i, j) table =
+  case Array.get i table of
+    Just row ->
+      case Array.get j row of
+        Just cell ->
+          case cell.status of
+            Empty ->
+              let
+                -- TODO they should be hidden
+                newRow = Array.set j (Cell Mine Hidden) row
+              in
+                Array.set i newRow table
 
-                Mine ->
-                  -- TODO prossima mina
-                  table
+            Mine ->
+              let
+                newJ = modBy (Array.length row) (j + 1)
+              in
+                case newJ of
+                  0 ->
+                    let
+                      newI = modBy (Array.length table) (i + 1)
+                    in
+                      addMine (newI, newJ) table 
+              
+                  _ ->
+                    addMine (i, newJ) table
 
-                _ ->
-                  table
-            
-            Nothing ->
+            _ ->
               table
-  
-      Nothing ->
-        table
+          
+        Nothing ->
+          table
+
+    Nothing ->
+      table
 
 minesLocation : Model -> Random.Generator (List (Int, Int))
 minesLocation model =
@@ -141,7 +191,7 @@ minesLocation model =
 
 initializeModel : Int -> Int -> Int -> Model
 initializeModel nRows nColumn nMines =
-  Model Array.empty nRows nColumn nMines
+  Model Array.empty nRows nColumn nMines Playing
 
 showTable : Model -> Html Msg
 showTable model =
