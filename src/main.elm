@@ -197,12 +197,16 @@ showCell table i j =
             newRow = Array.set j {cell | visualization = Shown} row
             newTable = Array.set i newRow table
           in
-            case cell.status of
-              Number 0 ->
-                showNearCells newTable i j
-          
-              _ -> 
-                newTable
+            case cell.visualization of
+              Shown -> newTable
+              Hidden ->
+                case cell.status of
+                  Number 0 ->
+                    showNearCells newTable i j
+              
+                  _ -> 
+                    newTable
+              _ -> newTable
           
         Nothing ->
           table
@@ -212,7 +216,22 @@ showCell table i j =
 
 showNearCells : Table -> Int -> Int -> Table
 showNearCells table i j =
-  table
+  let
+    nearCoords = 
+      [ (i-1, j-1)
+      , (i-1, j)
+      , (i-1, j+1)
+      , (i, j-1)
+      , (i, j+1)
+      , (i+1, j-1)
+      , (i+1, j)
+      , (i+1, j+1)
+      ]
+  in
+    List.foldl showCellTuple table nearCoords
+
+showCellTuple : (Int, Int) -> Table -> Table
+showCellTuple (i, j) table = showCell table i j
 
 createTableWithNumbers : Table -> Table
 createTableWithNumbers table =

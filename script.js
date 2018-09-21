@@ -5802,12 +5802,12 @@ var author$project$Main$isTableComplete = function (table) {
 var author$project$Main$Shown = {$: 'Shown'};
 var author$project$Main$showCell = F3(
 	function (table, i, j) {
-		var _n0 = A2(elm$core$Array$get, i, table);
-		if (_n0.$ === 'Just') {
-			var row = _n0.a;
-			var _n1 = A2(elm$core$Array$get, j, row);
-			if (_n1.$ === 'Just') {
-				var cell = _n1.a;
+		var _n1 = A2(elm$core$Array$get, i, table);
+		if (_n1.$ === 'Just') {
+			var row = _n1.a;
+			var _n2 = A2(elm$core$Array$get, j, row);
+			if (_n2.$ === 'Just') {
+				var cell = _n2.a;
 				var newRow = A3(
 					elm$core$Array$set,
 					j,
@@ -5815,13 +5815,48 @@ var author$project$Main$showCell = F3(
 						cell,
 						{visualization: author$project$Main$Shown}),
 					row);
-				return A3(elm$core$Array$set, i, newRow, table);
+				var newTable = A3(elm$core$Array$set, i, newRow, table);
+				var _n3 = cell.visualization;
+				switch (_n3.$) {
+					case 'Shown':
+						return newTable;
+					case 'Hidden':
+						var _n4 = cell.status;
+						if ((_n4.$ === 'Number') && (!_n4.a)) {
+							return A3(author$project$Main$showNearCells, newTable, i, j);
+						} else {
+							return newTable;
+						}
+					default:
+						return newTable;
+				}
 			} else {
 				return table;
 			}
 		} else {
 			return table;
 		}
+	});
+var author$project$Main$showCellTuple = F2(
+	function (_n0, table) {
+		var i = _n0.a;
+		var j = _n0.b;
+		return A3(author$project$Main$showCell, table, i, j);
+	});
+var author$project$Main$showNearCells = F3(
+	function (table, i, j) {
+		var nearCoords = _List_fromArray(
+			[
+				_Utils_Tuple2(i - 1, j - 1),
+				_Utils_Tuple2(i - 1, j),
+				_Utils_Tuple2(i - 1, j + 1),
+				_Utils_Tuple2(i, j - 1),
+				_Utils_Tuple2(i, j + 1),
+				_Utils_Tuple2(i + 1, j - 1),
+				_Utils_Tuple2(i + 1, j),
+				_Utils_Tuple2(i + 1, j + 1)
+			]);
+		return A3(elm$core$List$foldl, author$project$Main$showCellTuple, table, nearCoords);
 	});
 var elm$core$Platform$Cmd$batch = _Platform_batch;
 var elm$core$Platform$Cmd$none = elm$core$Platform$Cmd$batch(_List_Nil);
