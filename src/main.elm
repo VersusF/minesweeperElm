@@ -61,31 +61,13 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     ShowCell i j ->
-      let
-        newTable = showCell model.table i j
-      in
-        ( { model 
-            | table = newTable
-            , playerStatus = 
-              case getCell model.table i j of
-                Just cell -> 
-                  if isMine cell then 
-                    Lost 
-                  else if isTableComplete newTable then
-                    Win
-                  else
-                    Playing
-
-                Nothing -> Playing
-            }
-        , Cmd.none
-        )
+      showCellAndCheckWin model i j
 
     FlagCell i j ->
       ({model | table = flagCell model.table i j}, Cmd.none)
 
     Initialize ->
-      (model, Cmd.none)
+      init ()
 
     PopolateTable list ->
       let
@@ -100,9 +82,9 @@ view model =
   case model.playerStatus of
     Playing -> viewPlayingBoard model
         
-    Win -> viewWinningBoard
+    Win -> viewWinningBoard model
 
-    Lost -> viewLosingBoard
+    Lost -> viewLosingBoard model
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
@@ -119,6 +101,41 @@ init _ =
     )
 
 -- MY FUNCTIONS
+
+showCellAndCheckWin : Model -> Int -> Int -> (Model, Cmd Msg)
+showCellAndCheckWin model i j =
+  let
+    newTable = showCell model.table i j
+    newPlayerStatus =
+      case getCell model.table i j of
+        Just cell -> 
+          if isMine cell then 
+            Lost 
+          else if isTableComplete newTable then
+            Win
+          else
+            Playing
+
+        Nothing -> Playing
+  in
+    ( { model 
+        | table = 
+          case newPlayerStatus of
+            Lost -> showAllMines newTable
+            _ -> newTable
+        , playerStatus = newPlayerStatus
+        }
+    , Cmd.none
+    )
+
+showAllMines : Table -> Table
+showAllMines table =
+  Array.map 
+    ( \row -> Array.map 
+      (\cell -> if cell.status == Mine then {cell | visualization = Shown} else cell) 
+      row
+    ) 
+    table
 
 isTableComplete : Table -> Bool
 isTableComplete table =
@@ -156,19 +173,31 @@ viewPlayingBoard model =
       , li [] [text ("Column number: " ++ (String.fromInt model.columnNumber))]
       , li [] [text ("Mines number: " ++ (String.fromInt model.mineNumber))]
       ]
-    , vieTable model
+    , viewTable model 
     ]
 
-viewWinningBoard : Html Msg
-viewWinningBoard =
+viewWinningBoard : Model -> Html Msg
+viewWinningBoard model =
   div []
-    [h1 [class "title"] [text "Congratulations! You win!"]]
+    [ h1 [class "title"] [text "Congratulations! You win!"]
+    , newGameButton
+    , viewTable model
+    ]
 
-viewLosingBoard : Html Msg
-viewLosingBoard =
+viewLosingBoard : Model -> Html Msg
+viewLosingBoard model = 
   div []
-    [h1 [class "title"] [text "Game Over"]]
+    [ h1 [class "title"] [text "Game Over"]
+    , newGameButton
+    , viewTable model
+    ]
 
+newGameButton : Html Msg
+newGameButton = 
+  button 
+    [ class "endButton"
+    , onClick Initialize
+    ] [text "New Game"]
 
 flagCell : Table -> Int -> Int -> Table
 flagCell table i j =
@@ -326,31 +355,39 @@ initializeModel : Int -> Int -> Int -> Model
 initializeModel nRows nColumn nMines =
   Model Array.empty nRows nColumn nMines Playing
 
-vieTable : Model -> Html Msg
-vieTable model =
-  table [class "myTable"] (List.indexedMap viewRow (Array.toList model.table))
+viewTable : Model -> Html Msg
+viewTable model =
+  table [class "myTable"] (List.indexedMap (viewRow model.playerStatus) (Array.toList model.table))
 
-viewRow : Int -> Array Cell -> Html Msg
-viewRow i list =
-  tr [] (List.indexedMap (viewCell i) (Array.toList list))
+viewRow : PlayerStatus -> Int -> Array Cell -> Html Msg
+viewRow playerStatus i list =
+  tr [] (List.indexedMap (viewCell playerStatus i) (Array.toList list))
 
-viewCell : Int -> Int -> Cell -> Html Msg
-viewCell i j cell =
+viewCell : PlayerStatus -> Int -> Int -> Cell -> Html Msg
+viewCell playerStatus i j cell =
   case cell.visualization of
     Hidden ->
-      td 
-        [ class "hiddenCell"
-        , onRightClick (FlagCell i j)
-        , onClick (ShowCell i j)
-        ]
+      td
+        ( case playerStatus of
+            Playing -> 
+              [ class "hiddenCell"
+              , onRightClick (FlagCell i j)
+              , onClick (ShowCell i j)
+              ]
+            _ -> [class "hiddenCell"]
+        )
         [text ""]     
 
     Flagged ->
       td
-        [ class "flaggedCell"
-        , onClick (ShowCell i j)
-        ]
-        [text "F"]
+        ( case playerStatus of
+          Playing ->
+            [ class "flaggedCell"
+            , onClick (ShowCell i j)
+            ]
+          _ -> [class "hiddenCell"]
+        )
+        [text ""]
       
 
     Shown ->
@@ -362,7 +399,7 @@ viewCell i j cell =
           td [class "numberCell"] [text (String.fromInt n)]
             
         Mine ->
-          td [class "mineCell"] [text "M"] 
+          td [class "minedCell"] [text ""] 
 
         Empty ->
           td [] []

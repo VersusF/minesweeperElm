@@ -1,7 +1,20 @@
+body {
+    background-color: #0e0e0e;
+}
+
+h1 {
+    text-align: center;
+    width: 100%;
+    color: red;
+}
+
 div.wrapperDiv{
     width: 100%;
     height: 100%;
-    margin: auto;
+    background: #0e0e0e url("static/wallpaper_modify.jpg") no-repeat center top;
+    font-weight: 400;
+    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    color: #bfbfca;
 }
 
 .myTable {
@@ -9,8 +22,10 @@ div.wrapperDiv{
     margin: auto;
 }
 table.myTable tr td {
+    /* border: 1px solid #bfbfca; */
     border: 1px solid black;
 }
+
 table.myTable td {
     width: 40px;
     height: 40px;
@@ -21,5 +36,36 @@ table.myTable td {
 }
 
 td.number0cell {
+    background-color: #8a8a8a50;
+}
+
+td.flaggedCell {
+    background:  #bfbfca80 url("static/flag.png") no-repeat center center;
+    background-clip: border-box;
+    background-size: 30px;
+}
+
+td.minedCell {
+    background:  #bfbfca80 url("static/mine.png") no-repeat center center;
+    background-clip: border-box;
+    background-size: 30px;
+}
+
+td.numberCell {
+    background-color:  #bfbfca80;
+}
+
+td.hiddenCell {
+    background-color:  #bfbfca80;
+}
+
+button.endButton {
     background-color: #bebebe;
+    color: #0e0e0e;
+    padding: 2px;
+    text-align: center;
+    margin-left: 45%;
+    margin-right: 45%;
+    width: 10%;
+    margin-bottom: 10px;
 }

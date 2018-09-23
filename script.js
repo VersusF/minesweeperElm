@@ -5097,8 +5097,6 @@ var elm$core$Platform$Sub$none = elm$core$Platform$Sub$batch(_List_Nil);
 var author$project$Main$subscriptions = function (model) {
 	return elm$core$Platform$Sub$none;
 };
-var author$project$Main$Lost = {$: 'Lost'};
-var author$project$Main$Win = {$: 'Win'};
 var author$project$Main$Cell = F2(
 	function (status, visualization) {
 		return {status: status, visualization: visualization};
@@ -5725,6 +5723,8 @@ var author$project$Main$flagCell = F3(
 			return table;
 		}
 	});
+var author$project$Main$Lost = {$: 'Lost'};
+var author$project$Main$Win = {$: 'Win'};
 var author$project$Main$getCell = F3(
 	function (table, i, j) {
 		var _n0 = A2(elm$core$Array$get, i, table);
@@ -5800,6 +5800,21 @@ var author$project$Main$isTableComplete = function (table) {
 		A2(elm$core$Array$filter, author$project$Main$isRowHidden, table));
 };
 var author$project$Main$Shown = {$: 'Shown'};
+var author$project$Main$showAllMines = function (table) {
+	return A2(
+		elm$core$Array$map,
+		function (row) {
+			return A2(
+				elm$core$Array$map,
+				function (cell) {
+					return _Utils_eq(cell.status, author$project$Main$Mine) ? _Utils_update(
+						cell,
+						{visualization: author$project$Main$Shown}) : cell;
+				},
+				row);
+		},
+		table);
+};
 var author$project$Main$showCell = F3(
 	function (table, i, j) {
 		var _n1 = A2(elm$core$Array$get, i, table);
@@ -5860,29 +5875,40 @@ var author$project$Main$showNearCells = F3(
 	});
 var elm$core$Platform$Cmd$batch = _Platform_batch;
 var elm$core$Platform$Cmd$none = elm$core$Platform$Cmd$batch(_List_Nil);
+var author$project$Main$showCellAndCheckWin = F3(
+	function (model, i, j) {
+		var newTable = A3(author$project$Main$showCell, model.table, i, j);
+		var newPlayerStatus = function () {
+			var _n1 = A3(author$project$Main$getCell, model.table, i, j);
+			if (_n1.$ === 'Just') {
+				var cell = _n1.a;
+				return author$project$Main$isMine(cell) ? author$project$Main$Lost : (author$project$Main$isTableComplete(newTable) ? author$project$Main$Win : author$project$Main$Playing);
+			} else {
+				return author$project$Main$Playing;
+			}
+		}();
+		return _Utils_Tuple2(
+			_Utils_update(
+				model,
+				{
+					playerStatus: newPlayerStatus,
+					table: function () {
+						if (newPlayerStatus.$ === 'Lost') {
+							return author$project$Main$showAllMines(newTable);
+						} else {
+							return newTable;
+						}
+					}()
+				}),
+			elm$core$Platform$Cmd$none);
+	});
 var author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
 			case 'ShowCell':
 				var i = msg.a;
 				var j = msg.b;
-				var newTable = A3(author$project$Main$showCell, model.table, i, j);
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							playerStatus: function () {
-								var _n1 = A3(author$project$Main$getCell, model.table, i, j);
-								if (_n1.$ === 'Just') {
-									var cell = _n1.a;
-									return author$project$Main$isMine(cell) ? author$project$Main$Lost : (author$project$Main$isTableComplete(newTable) ? author$project$Main$Win : author$project$Main$Playing);
-								} else {
-									return author$project$Main$Playing;
-								}
-							}(),
-							table: newTable
-						}),
-					elm$core$Platform$Cmd$none);
+				return A3(author$project$Main$showCellAndCheckWin, model, i, j);
 			case 'FlagCell':
 				var i = msg.a;
 				var j = msg.b;
@@ -5894,7 +5920,7 @@ var author$project$Main$update = F2(
 						}),
 					elm$core$Platform$Cmd$none);
 			case 'Initialize':
-				return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
+				return author$project$Main$init(_Utils_Tuple0);
 			default:
 				var list = msg.a;
 				var tableMines = A3(author$project$Main$createTableWithMines, model.rowNumber, model.rowNumber, list);
@@ -5906,6 +5932,7 @@ var author$project$Main$update = F2(
 					elm$core$Platform$Cmd$none);
 		}
 	});
+var author$project$Main$Initialize = {$: 'Initialize'};
 var elm$json$Json$Decode$map = _Json_map1;
 var elm$json$Json$Decode$map2 = _Json_map2;
 var elm$json$Json$Decode$succeed = _Json_succeed;
@@ -5921,8 +5948,7 @@ var elm$virtual_dom$VirtualDom$toHandlerInt = function (handler) {
 			return 3;
 	}
 };
-var elm$html$Html$div = _VirtualDom_node('div');
-var elm$html$Html$h1 = _VirtualDom_node('h1');
+var elm$html$Html$button = _VirtualDom_node('button');
 var elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
 var elm$html$Html$text = elm$virtual_dom$VirtualDom$text;
 var elm$json$Json$Encode$string = _Json_wrap;
@@ -5934,21 +5960,33 @@ var elm$html$Html$Attributes$stringProperty = F2(
 			elm$json$Json$Encode$string(string));
 	});
 var elm$html$Html$Attributes$class = elm$html$Html$Attributes$stringProperty('className');
-var author$project$Main$viewLosingBoard = A2(
-	elm$html$Html$div,
-	_List_Nil,
+var elm$virtual_dom$VirtualDom$Normal = function (a) {
+	return {$: 'Normal', a: a};
+};
+var elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
+var elm$html$Html$Events$on = F2(
+	function (event, decoder) {
+		return A2(
+			elm$virtual_dom$VirtualDom$on,
+			event,
+			elm$virtual_dom$VirtualDom$Normal(decoder));
+	});
+var elm$html$Html$Events$onClick = function (msg) {
+	return A2(
+		elm$html$Html$Events$on,
+		'click',
+		elm$json$Json$Decode$succeed(msg));
+};
+var author$project$Main$newGameButton = A2(
+	elm$html$Html$button,
 	_List_fromArray(
 		[
-			A2(
-			elm$html$Html$h1,
-			_List_fromArray(
-				[
-					elm$html$Html$Attributes$class('title')
-				]),
-			_List_fromArray(
-				[
-					elm$html$Html$text('Game Over')
-				]))
+			elm$html$Html$Attributes$class('endButton'),
+			elm$html$Html$Events$onClick(author$project$Main$Initialize)
+		]),
+	_List_fromArray(
+		[
+			elm$html$Html$text('New Game')
 		]));
 var author$project$Main$FlagCell = F2(
 	function (a, b) {
@@ -5961,7 +5999,6 @@ var author$project$Main$ShowCell = F2(
 var elm$virtual_dom$VirtualDom$Custom = function (a) {
 	return {$: 'Custom', a: a};
 };
-var elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
 var elm$html$Html$Events$custom = F2(
 	function (event, decoder) {
 		return A2(
@@ -5977,37 +6014,30 @@ var author$project$Main$onRightClick = function (message) {
 			{message: message, preventDefault: true, stopPropagation: true}));
 };
 var elm$html$Html$td = _VirtualDom_node('td');
-var elm$virtual_dom$VirtualDom$Normal = function (a) {
-	return {$: 'Normal', a: a};
-};
-var elm$html$Html$Events$on = F2(
-	function (event, decoder) {
-		return A2(
-			elm$virtual_dom$VirtualDom$on,
-			event,
-			elm$virtual_dom$VirtualDom$Normal(decoder));
-	});
-var elm$html$Html$Events$onClick = function (msg) {
-	return A2(
-		elm$html$Html$Events$on,
-		'click',
-		elm$json$Json$Decode$succeed(msg));
-};
-var author$project$Main$viewCell = F3(
-	function (i, j, cell) {
+var author$project$Main$viewCell = F4(
+	function (playerStatus, i, j, cell) {
 		var _n0 = cell.visualization;
 		switch (_n0.$) {
 			case 'Hidden':
 				return A2(
 					elm$html$Html$td,
-					_List_fromArray(
-						[
-							elm$html$Html$Attributes$class('hiddenCell'),
-							author$project$Main$onRightClick(
-							A2(author$project$Main$FlagCell, i, j)),
-							elm$html$Html$Events$onClick(
-							A2(author$project$Main$ShowCell, i, j))
-						]),
+					function () {
+						if (playerStatus.$ === 'Playing') {
+							return _List_fromArray(
+								[
+									elm$html$Html$Attributes$class('hiddenCell'),
+									author$project$Main$onRightClick(
+									A2(author$project$Main$FlagCell, i, j)),
+									elm$html$Html$Events$onClick(
+									A2(author$project$Main$ShowCell, i, j))
+								]);
+						} else {
+							return _List_fromArray(
+								[
+									elm$html$Html$Attributes$class('hiddenCell')
+								]);
+						}
+					}(),
 					_List_fromArray(
 						[
 							elm$html$Html$text('')
@@ -6015,21 +6045,30 @@ var author$project$Main$viewCell = F3(
 			case 'Flagged':
 				return A2(
 					elm$html$Html$td,
+					function () {
+						if (playerStatus.$ === 'Playing') {
+							return _List_fromArray(
+								[
+									elm$html$Html$Attributes$class('flaggedCell'),
+									elm$html$Html$Events$onClick(
+									A2(author$project$Main$ShowCell, i, j))
+								]);
+						} else {
+							return _List_fromArray(
+								[
+									elm$html$Html$Attributes$class('hiddenCell')
+								]);
+						}
+					}(),
 					_List_fromArray(
 						[
-							elm$html$Html$Attributes$class('flaggedCell'),
-							elm$html$Html$Events$onClick(
-							A2(author$project$Main$ShowCell, i, j))
-						]),
-					_List_fromArray(
-						[
-							elm$html$Html$text('F')
+							elm$html$Html$text('')
 						]));
 			default:
-				var _n1 = cell.status;
-				switch (_n1.$) {
+				var _n3 = cell.status;
+				switch (_n3.$) {
 					case 'Number':
-						if (!_n1.a) {
+						if (!_n3.a) {
 							return A2(
 								elm$html$Html$td,
 								_List_fromArray(
@@ -6041,7 +6080,7 @@ var author$project$Main$viewCell = F3(
 										elm$html$Html$text('')
 									]));
 						} else {
-							var n = _n1.a;
+							var n = _n3.a;
 							return A2(
 								elm$html$Html$td,
 								_List_fromArray(
@@ -6059,11 +6098,11 @@ var author$project$Main$viewCell = F3(
 							elm$html$Html$td,
 							_List_fromArray(
 								[
-									elm$html$Html$Attributes$class('mineCell')
+									elm$html$Html$Attributes$class('minedCell')
 								]),
 							_List_fromArray(
 								[
-									elm$html$Html$text('M')
+									elm$html$Html$text('')
 								]));
 					default:
 						return A2(elm$html$Html$td, _List_Nil, _List_Nil);
@@ -6071,18 +6110,18 @@ var author$project$Main$viewCell = F3(
 		}
 	});
 var elm$html$Html$tr = _VirtualDom_node('tr');
-var author$project$Main$viewRow = F2(
-	function (i, list) {
+var author$project$Main$viewRow = F3(
+	function (playerStatus, i, list) {
 		return A2(
 			elm$html$Html$tr,
 			_List_Nil,
 			A2(
 				elm$core$List$indexedMap,
-				author$project$Main$viewCell(i),
+				A2(author$project$Main$viewCell, playerStatus, i),
 				elm$core$Array$toList(list)));
 	});
 var elm$html$Html$table = _VirtualDom_node('table');
-var author$project$Main$vieTable = function (model) {
+var author$project$Main$viewTable = function (model) {
 	return A2(
 		elm$html$Html$table,
 		_List_fromArray(
@@ -6091,8 +6130,30 @@ var author$project$Main$vieTable = function (model) {
 			]),
 		A2(
 			elm$core$List$indexedMap,
-			author$project$Main$viewRow,
+			author$project$Main$viewRow(model.playerStatus),
 			elm$core$Array$toList(model.table)));
+};
+var elm$html$Html$div = _VirtualDom_node('div');
+var elm$html$Html$h1 = _VirtualDom_node('h1');
+var author$project$Main$viewLosingBoard = function (model) {
+	return A2(
+		elm$html$Html$div,
+		_List_Nil,
+		_List_fromArray(
+			[
+				A2(
+				elm$html$Html$h1,
+				_List_fromArray(
+					[
+						elm$html$Html$Attributes$class('title')
+					]),
+				_List_fromArray(
+					[
+						elm$html$Html$text('Game Over')
+					])),
+				author$project$Main$newGameButton,
+				author$project$Main$viewTable(model)
+			]));
 };
 var elm$html$Html$li = _VirtualDom_node('li');
 var elm$html$Html$ul = _VirtualDom_node('ul');
@@ -6132,34 +6193,38 @@ var author$project$Main$viewPlayingBoard = function (model) {
 								'Mines number: ' + elm$core$String$fromInt(model.mineNumber))
 							]))
 					])),
-				author$project$Main$vieTable(model)
+				author$project$Main$viewTable(model)
 			]));
 };
-var author$project$Main$viewWinningBoard = A2(
-	elm$html$Html$div,
-	_List_Nil,
-	_List_fromArray(
-		[
-			A2(
-			elm$html$Html$h1,
-			_List_fromArray(
-				[
-					elm$html$Html$Attributes$class('title')
-				]),
-			_List_fromArray(
-				[
-					elm$html$Html$text('Congratulations! You win!')
-				]))
-		]));
+var author$project$Main$viewWinningBoard = function (model) {
+	return A2(
+		elm$html$Html$div,
+		_List_Nil,
+		_List_fromArray(
+			[
+				A2(
+				elm$html$Html$h1,
+				_List_fromArray(
+					[
+						elm$html$Html$Attributes$class('title')
+					]),
+				_List_fromArray(
+					[
+						elm$html$Html$text('Congratulations! You win!')
+					])),
+				author$project$Main$newGameButton,
+				author$project$Main$viewTable(model)
+			]));
+};
 var author$project$Main$view = function (model) {
 	var _n0 = model.playerStatus;
 	switch (_n0.$) {
 		case 'Playing':
 			return author$project$Main$viewPlayingBoard(model);
 		case 'Win':
-			return author$project$Main$viewWinningBoard;
+			return author$project$Main$viewWinningBoard(model);
 		default:
-			return author$project$Main$viewLosingBoard;
+			return author$project$Main$viewLosingBoard(model);
 	}
 };
 var elm$browser$Browser$External = function (a) {
