@@ -28,6 +28,11 @@ type alias Model =
   , playerStatus : PlayerStatus
   }
 
+type Property 
+  = RowNumber
+  | ColumnNumber
+  | MineNumber
+
 type alias Table = Array (Array Cell)
 
 type alias Cell =
@@ -39,6 +44,7 @@ type PlayerStatus
   = Playing
   | Win
   | Lost
+  | Settings
 
 type Status
   = Number Int
@@ -54,7 +60,9 @@ type Msg
   = ShowCell Int Int
   | FlagCell Int Int
   | Initialize
+  | Restart
   | PopolateTable (List (Int, Int))
+  | UpdateStat Property String
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -67,7 +75,13 @@ update msg model =
       ({model | table = flagCell model.table i j}, Cmd.none)
 
     Initialize ->
-      init ()
+      initialize model
+
+    Restart ->
+      restart model
+
+    UpdateStat property value ->
+      updateStat property value model
 
     PopolateTable list ->
       let
@@ -86,6 +100,9 @@ view model =
 
     Lost -> viewLosingBoard model
 
+    Settings -> viewSettings model
+
+
 subscriptions : Model -> Sub Msg
 subscriptions model =
   Sub.none
@@ -97,10 +114,102 @@ init _ =
     model = initializeModel 10 10 20
   in
     ( model
-    , Random.generate PopolateTable (minesLocation model)
+    , Cmd.none
     )
 
 -- MY FUNCTIONS
+
+restart : Model -> (Model, Cmd Msg)
+restart model = ({model | playerStatus = Settings}, Cmd.none)
+
+updateStat : Property -> String -> Model -> (Model, Cmd Msg)
+updateStat property value model =
+  let
+    newValue =
+      case String.toInt value of
+        Just nv -> nv
+        Nothing -> 0
+    newModel =
+      case property of
+        RowNumber -> {model | rowNumber = newValue}
+        ColumnNumber -> {model | columnNumber = newValue}
+        MineNumber -> 
+          {model 
+            | mineNumber =
+              if newValue <=(maxMineNumber model) then
+                newValue
+              else
+                maxMineNumber model
+          }
+  in
+    (newModel, Cmd.none)   
+
+initialize : Model -> (Model, Cmd Msg)
+initialize model =
+  ( {model | playerStatus = Playing}
+  , Random.generate PopolateTable (minesLocation model) 
+  )
+
+viewSettings : Model -> Html Msg
+viewSettings model =
+  div []
+    [ table [class "settingsTable"] 
+      [ tr [] 
+        [ td [] [text "width:"]
+        , td []
+          [ input 
+              [ type_ "number"
+              , step "1"
+              , Html.Attributes.min "3"
+              , Html.Attributes.max "20"
+              , placeholder <| String.fromInt model.columnNumber
+              , onInput <| UpdateStat ColumnNumber
+              ] [] 
+          ]
+        ]
+      , tr [] 
+        [ td [] [text "height:"]
+        , td []
+          [ input 
+              [ type_ "number"
+              , step "1"
+              , Html.Attributes.min "3"
+              , Html.Attributes.max "20"
+              , placeholder <| String.fromInt model.rowNumber
+              , onInput <| UpdateStat RowNumber
+              ] [] 
+          ]
+        ]
+      , tr [] 
+        [ td [] [text "mines:"]
+        , td []
+          [ input 
+              [ type_ "number"
+              , step "1"
+              , Html.Attributes.min "3"
+              , Html.Attributes.max <| String.fromInt <| maxMineNumber model
+              , placeholder <| String.fromInt model.mineNumber
+              , onInput <| UpdateStat MineNumber
+              ] [] 
+          ]
+        ]
+      , tr [] 
+        [ td [colspan 2]
+          [ button 
+              [ onClick Initialize
+              , class "startButton"
+              ] [text "start"] 
+          ]
+        ]
+      ]
+    ]
+
+maxMineNumber : Model -> Int
+maxMineNumber model =
+  model.rowNumber * model.columnNumber
+    |> toFloat
+    |> (*) 0.2
+    |> ceiling
 
 showCellAndCheckWin : Model -> Int -> Int -> (Model, Cmd Msg)
 showCellAndCheckWin model i j =
@@ -171,35 +280,30 @@ getCell table i j =
 viewPlayingBoard : Model -> Html Msg
 viewPlayingBoard model =
   div []
-    [ ul []
-      [ li [] [text ("Row number: " ++ (String.fromInt model.rowNumber))]
-      , li [] [text ("Column number: " ++ (String.fromInt model.columnNumber))]
-      , li [] [text ("Mines number: " ++ (String.fromInt model.mineNumber))]
-      ]
-    , viewTable model 
+    [ viewTable model 
     ]
 
 viewWinningBoard : Model -> Html Msg
 viewWinningBoard model =
   div []
-    [ h1 [class "title"] [text "Congratulations! You win!"]
+    [ viewTable model
+    , h1 [class "title"] [text "Congratulations! You win!"]
     , newGameButton
-    , viewTable model
     ]
 
 viewLosingBoard : Model -> Html Msg
 viewLosingBoard model = 
   div []
-    [ h1 [class "title"] [text "Game Over"]
+    [ viewTable model
+    , h1 [class "title"] [text "Game Over"]
     , newGameButton
-    , viewTable model
     ]
 
 newGameButton : Html Msg
 newGameButton = 
   button 
     [ class "endButton"
-    , onClick Initialize
+    , onClick Restart
     ] [text "New Game"]
 
 flagCell : Table -> Int -> Int -> Table
@@ -361,7 +465,7 @@ minesLocation model =
 
 initializeModel : Int -> Int -> Int -> Model
 initializeModel nRows nColumn nMines =
-  Model Array.empty nRows nColumn nMines Playing
+  Model Array.empty nRows nColumn nMines Settings
 
 viewTable : Model -> Html Msg
 viewTable model =

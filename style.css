@@ -69,3 +69,16 @@ button.endButton {
     width: 10%;
     margin-bottom: 10px;
 }
+
+table.settingsTable {
+    margin: auto;
+    color: #bfbfca;
+}
+
+button.startButton {
+    text-align: center;
+    background-color: #bebebe;
+    color: #0e0e0e;
+    margin: auto;
+    display: block;
+}
