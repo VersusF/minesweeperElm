@@ -107,12 +107,15 @@ showCellAndCheckWin model i j =
   let
     newTable = showCell model.table i j
     newPlayerStatus =
-      case getCell model.table i j of
-        Just cell -> 
-          if isMine cell then 
-            Lost 
-          else if isTableComplete newTable then
-            Win
+      case getCell newTable i j of
+        Just cell ->
+          if cell.visualization == Shown then
+            if isMine cell then 
+              Lost 
+            else if isTableComplete newTable then
+              Win
+            else
+              Playing
           else
             Playing
 
@@ -121,8 +124,8 @@ showCellAndCheckWin model i j =
     ( { model 
         | table = 
           case newPlayerStatus of
-            Lost -> showAllMines newTable
-            _ -> newTable
+            Playing -> newTable
+            _ -> showAllMines newTable
         , playerStatus = newPlayerStatus
         }
     , Cmd.none
@@ -223,7 +226,12 @@ showCell table i j =
       case Array.get j row of
         Just cell ->
           let
-            newRow = Array.set j {cell | visualization = Shown} row
+            newVisualization =
+              case cell.visualization of
+                Flagged -> Hidden
+                Hidden -> Shown
+                Shown -> Shown
+            newRow = Array.set j {cell | visualization = newVisualization} row
             newTable = Array.set i newRow table
           in
             case cell.visualization of

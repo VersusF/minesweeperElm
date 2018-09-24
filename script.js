@@ -5724,6 +5724,7 @@ var author$project$Main$flagCell = F3(
 		}
 	});
 var author$project$Main$Lost = {$: 'Lost'};
+var author$project$Main$Shown = {$: 'Shown'};
 var author$project$Main$Win = {$: 'Win'};
 var author$project$Main$getCell = F3(
 	function (table, i, j) {
@@ -5799,7 +5800,6 @@ var author$project$Main$isTableComplete = function (table) {
 	return !elm$core$Array$length(
 		A2(elm$core$Array$filter, author$project$Main$isRowHidden, table));
 };
-var author$project$Main$Shown = {$: 'Shown'};
 var author$project$Main$showAllMines = function (table) {
 	return A2(
 		elm$core$Array$map,
@@ -5823,12 +5823,23 @@ var author$project$Main$showCell = F3(
 			var _n2 = A2(elm$core$Array$get, j, row);
 			if (_n2.$ === 'Just') {
 				var cell = _n2.a;
+				var newVisualization = function () {
+					var _n5 = cell.visualization;
+					switch (_n5.$) {
+						case 'Flagged':
+							return author$project$Main$Hidden;
+						case 'Hidden':
+							return author$project$Main$Shown;
+						default:
+							return author$project$Main$Shown;
+					}
+				}();
 				var newRow = A3(
 					elm$core$Array$set,
 					j,
 					_Utils_update(
 						cell,
-						{visualization: author$project$Main$Shown}),
+						{visualization: newVisualization}),
 					row);
 				var newTable = A3(elm$core$Array$set, i, newRow, table);
 				var _n3 = cell.visualization;
@@ -5879,10 +5890,10 @@ var author$project$Main$showCellAndCheckWin = F3(
 	function (model, i, j) {
 		var newTable = A3(author$project$Main$showCell, model.table, i, j);
 		var newPlayerStatus = function () {
-			var _n1 = A3(author$project$Main$getCell, model.table, i, j);
+			var _n1 = A3(author$project$Main$getCell, newTable, i, j);
 			if (_n1.$ === 'Just') {
 				var cell = _n1.a;
-				return author$project$Main$isMine(cell) ? author$project$Main$Lost : (author$project$Main$isTableComplete(newTable) ? author$project$Main$Win : author$project$Main$Playing);
+				return _Utils_eq(cell.visualization, author$project$Main$Shown) ? (author$project$Main$isMine(cell) ? author$project$Main$Lost : (author$project$Main$isTableComplete(newTable) ? author$project$Main$Win : author$project$Main$Playing)) : author$project$Main$Playing;
 			} else {
 				return author$project$Main$Playing;
 			}
@@ -5893,10 +5904,10 @@ var author$project$Main$showCellAndCheckWin = F3(
 				{
 					playerStatus: newPlayerStatus,
 					table: function () {
-						if (newPlayerStatus.$ === 'Lost') {
-							return author$project$Main$showAllMines(newTable);
-						} else {
+						if (newPlayerStatus.$ === 'Playing') {
 							return newTable;
+						} else {
+							return author$project$Main$showAllMines(newTable);
 						}
 					}()
 				}),
